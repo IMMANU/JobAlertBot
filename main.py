@@ -1,8 +1,9 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 
-BOT_TOKEN = "8965927548:AAEXQicdBCJDQA7iLl_80vsUgk1z8ALh5xA"
-CHAT_ID = "606044555"
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
 
 URL = "https://www.linkedin.com/jobs/search/?keywords=AWS%20OR%20AWS%20Cloud%20OR%20Cloud%20Engineer%20OR%20Platform%20Engineer%20OR%20CloudOps%20OR%20Site%20Reliability%20Engineer"
 
