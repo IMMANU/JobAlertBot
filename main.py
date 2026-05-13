@@ -3,45 +3,101 @@ import requests
 from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
-CHAT_ID = os.environ["CHAT_ID"]
+CHAT_ID   = os.environ["CHAT_ID"]
 
-URL = "https://www.linkedin.com/jobs/search/?keywords=AWS%20OR%20AWS%20Cloud%20OR%20Cloud%20Engineer%20OR%20Platform%20Engineer%20OR%20CloudOps%20OR%20Site%20Reliability%20Engineer&location=India&f_TPR=r86400&sortBy=DD"
+# ─── Sirf yahi titles chahiye tujhe ───────────────────────────
+ALLOWED_KEYWORDS = [
+    "aws", "cloud engineer", "platform engineer",
+    "cloudops", "site reliability", "sre", "devops engineer"
+]
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
+# ─── Yeh titles filter OUT ho jayenge ─────────────────────────
+BLOCKED_KEYWORDS = [
+    "salesforce", "azure", "gcp", "google cloud",
+    "java developer", "frontend", "react", "android"
+]
+
+# ─── Last 1 hour only (3600 seconds) ──────────────────────────
+URL = (
+    "https://www.linkedin.com/jobs/search/"
+    "?keywords=AWS+Cloud+Engineer+OR+Platform+Engineer+OR+SRE+OR+CloudOps"
+    "&location=India"
+    "&f_TPR=r3600"   # <-- 1 hour (was r86400 = 24hr)
+    "&sortBy=DD"
+)
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
 }
 
-response = requests.get(URL, headers=headers)
+# ─── Seen jobs track karne ke liye (in-memory, cron run ke andar) ──
+seen_links = set()
 
-soup = BeautifulSoup(response.text, "html.parser")
 
-jobs = soup.find_all("div", class_="base-search-card")
+def is_relevant(title: str) -> bool:
+    """Title mein allowed keyword hai AND blocked keyword nahi."""
+    t = title.lower()
+    has_good = any(kw in t for kw in ALLOWED_KEYWORDS)
+    has_bad  = any(kw in t for kw in BLOCKED_KEYWORDS)
+    return has_good and not has_bad
 
-for job in jobs[:20]:
 
-    title = job.find("h3").text.strip()
-
-    company = job.find("h4").text.strip()
-
-    link = job.find("a")["href"]
-
-    text = f"""
-🚀 New LinkedIn Job
-
-💼 {title}
-🏢 {company}
-
-🔗 {link}
-"""
-
-    telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
+def send_telegram(text: str):
     requests.post(
-        telegram_url,
-        data={
-            "chat_id": CHAT_ID,
-            "text": text
-        }
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        data={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"},
+        timeout=10
     )
 
-print("Done")
+
+def main():
+    try:
+        resp = requests.get(URL, headers=HEADERS, timeout=15)
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"Fetch failed: {e}")
+        return
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    cards = soup.find_all("div", class_="base-search-card")
+
+    print(f"Total cards found: {len(cards)}")
+
+    sent = 0
+    for job in cards:
+        try:
+            title   = job.find("h3").text.strip()
+            company = job.find("h4").text.strip()
+            link    = job.find("a")["href"].split("?")[0]  # clean URL
+        except Exception:
+            continue
+
+        # Skip if not relevant
+        if not is_relevant(title):
+            print(f"  SKIP: {title}")
+            continue
+
+        # Skip duplicates within this run
+        if link in seen_links:
+            continue
+        seen_links.add(link)
+
+        msg = (
+            f"🚀 <b>New Job Alert</b>\n\n"
+            f"💼 <b>{title}</b>\n"
+            f"🏢 {company}\n\n"
+            f"🔗 <a href='{link}'>Apply Now</a>"
+        )
+        send_telegram(msg)
+        print(f"  SENT: {title} @ {company}")
+        sent += 1
+
+    print(f"Done — sent {sent} alerts.")
+
+
+if name == "__main__":
+    main()
