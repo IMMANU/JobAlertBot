@@ -99,5 +99,5 @@ def main():
     print(f"Done — sent {sent} alerts.")
 
 
-if name == "__main__":
+if __name__ == "__main__":
     main()
