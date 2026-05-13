@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-URL = "https://www.linkedin.com/jobs/search/?keywords=AWS%20OR%20AWS%20Cloud%20OR%20Cloud%20Engineer%20OR%20Platform%20Engineer%20OR%20CloudOps%20OR%20Site%20Reliability%20Engineer&sortBy=DD"
+URL = "https://www.linkedin.com/jobs/search/?keywords=AWS%20OR%20AWS%20Cloud%20OR%20Cloud%20Engineer%20OR%20Platform%20Engineer%20OR%20CloudOps%20OR%20Site%20Reliability%20Engineer&location=India&f_TPR=r86400&sortBy=DD"
 
 headers = {
     "User-Agent": "Mozilla/5.0"
