@@ -17,7 +17,7 @@ soup = BeautifulSoup(response.text, "html.parser")
 
 jobs = soup.find_all("div", class_="base-search-card")
 
-for job in jobs[:5]:
+for job in jobs[:20]:
 
     title = job.find("h3").text.strip()
 
