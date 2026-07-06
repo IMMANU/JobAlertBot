@@ -7,7 +7,7 @@ CHAT_ID   = os.environ["CHAT_ID"]
 
 # ─── Sirf yahi titles chahiye tujhe ───────────────────────────
 ALLOWED_KEYWORDS = [
-    "aws", "cloud engineer", "platform engineer",
+    "aws", "cloud engineer", "platform engineer","cloudOps","cloudops","Infrastructure engineer"
     "cloudops", "site reliability", "sre"
 ]
 
