@@ -37,10 +37,21 @@ TIME_FILTER = "r86400"
 
 SEARCH_TERMS = [
     "AWS Cloud Engineer",
+    "AWS Engineer",
     "AWS Infrastructure Engineer",
     "Cloud Engineer",
     "Cloud Infrastructure Engineer",
     "Cloud Operations Engineer",
+    "Cloud Operation Engineer",
+    "Cloud Consultant",
+    "AWS Consultant",
+    "AWS Solution Architect",
+    "Cloud support engineer",
+    "AWS cloud support engineer",
+    "AWS support engineer",
+    "AWS systems engineer",
+    "cloud systems engineer",
+    
     "Cloud Platform Engineer",
     "Infrastructure Engineer",
     "SRE AWS",
@@ -67,6 +78,7 @@ ALLOWED_TITLE_KEYWORDS = [
 
     # Cloud Operations
     "cloud operations engineer",
+    "cloud operation engineer",
     "cloud operations",
     "cloud operations specialist",
 
