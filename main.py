@@ -3,6 +3,7 @@ import re
 import time
 import random
 import requests
+
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 
@@ -14,228 +15,227 @@ from urllib.parse import quote
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-# Testing ke liye 24 hours.
-# Jab everything works, ise r3600 kar dena.
+# Testing:
+# r86400 = last 24 hours
+# r3600  = last 1 hour
 TIME_FILTER = "r86400"
-
-MIN_SCORE = 40
-
-# Tumhare ~5 years experience ke hisaab se
-MIN_YEARS = 3
 
 
 # ============================================================
 # SEARCH TERMS
 # ============================================================
-
-# Bahut saare LinkedIn requests ek saath mat maaro.
-# Ye 6 searches enough hain.
+#
+# Targeted searches for YOUR profile.
+#
+# No DevOps search.
+# No Kubernetes requirement.
+# No Terraform requirement.
+# No ECS requirement.
+#
+# These are simply discovery queries.
+#
 
 SEARCH_TERMS = [
     "AWS Cloud Engineer",
+    "AWS Infrastructure Engineer",
     "Cloud Engineer",
     "Cloud Infrastructure Engineer",
-    "AWS Infrastructure Engineer",
     "Cloud Operations Engineer",
+    "Cloud Platform Engineer",
     "Infrastructure Engineer",
+    "SRE AWS",
 ]
 
 
 # ============================================================
-# TARGET TITLE KEYWORDS
+# ALLOWED TITLE KEYWORDS
 # ============================================================
 
-TITLE_SCORES = {
+ALLOWED_TITLE_KEYWORDS = [
 
-    # Strongest matches
-    "aws cloud engineer": 35,
-    "cloud infrastructure engineer": 30,
-    "aws infrastructure engineer": 30,
+    # AWS / Cloud
+    "aws cloud engineer",
+    "aws engineer",
+    "cloud engineer",
 
-    "cloud engineer": 28,
-    "aws engineer": 25,
+    # Infrastructure
+    "cloud infrastructure engineer",
+    "aws infrastructure engineer",
+    "infrastructure engineer",
+    "infrastructure automation engineer",
+    "infrastructure platform engineer",
 
-    "cloud operations engineer": 25,
-    "cloud operations": 20,
+    # Cloud Operations
+    "cloud operations engineer",
+    "cloud operations",
+    "cloud operations specialist",
 
-    "infrastructure engineer": 22,
-    "aws infrastructure": 22,
-
-    "cloud platform engineer": 22,
-    "aws platform engineer": 22,
-    "platform engineer": 15,
-
-    "aws systems engineer": 20,
-    "cloud systems engineer": 18,
-
-    "cloud migration engineer": 20,
-    "aws migration engineer": 20,
-
-    "infrastructure automation engineer": 20,
-
-    "cloud consultant": 12,
-    "aws consultant": 12,
-
-    # Lower priority
-    "site reliability engineer": 8,
-    "site reliability": 5,
-    "sre": 5,
-}
-
-
-# ============================================================
-# RESUME SKILLS
-# ============================================================
-
-SKILLS = {
-
-    # AWS
-    "aws": 10,
-    "amazon web services": 10,
-
-    # IaC
-    "terraform": 15,
-    "terraform modules": 15,
-    "infrastructure as code": 12,
-    "iac": 8,
-    "cloudformation": 12,
-
-    # AWS services
-    "ec2": 7,
-    "s3": 5,
-    "rds": 5,
-    "ecs": 7,
-    "ecr": 6,
-    "iam": 7,
-    "cloudwatch": 10,
-    "vpc": 7,
-    "load balancer": 5,
-    "elastic load balancer": 5,
-
-    # Operations
-    "cloud operations": 12,
-    "cloud infrastructure": 12,
-    "infrastructure automation": 12,
-    "cloud automation": 10,
-    "cloud migration": 10,
-    "migration": 5,
-
-    # Monitoring
-    "monitoring": 7,
-    "observability": 8,
-    "alerting": 5,
+    # Platform
+    "cloud platform engineer",
+    "aws platform engineer",
+    "platform engineer",
 
     # Systems
-    "aws systems manager": 10,
-    "systems manager": 8,
-    "ssm": 7,
+    "aws systems engineer",
+    "cloud systems engineer",
+    "systems engineer",
 
-    # Other AWS
-    "aws service catalog": 8,
-    "service catalog": 6,
-    "kms": 5,
-    "secrets manager": 5,
+    # Migration
+    "cloud migration engineer",
+    "aws migration engineer",
+    "cloud migration",
 
-    # Networking
-    "subnets": 4,
-    "route tables": 4,
-    "security groups": 5,
-    "network acl": 4,
-    "nacl": 4,
-    "networking": 5,
+    # Support
+    "cloud support engineer",
+    "aws cloud support engineer",
+    "aws support engineer",
 
-    # Containers
-    "docker": 5,
+    # Reliability
+    "site reliability engineer",
+    "site reliability",
+    "sre",
 
-    # Automation / CI
-    "bash": 5,
-    "github actions": 5,
-    "git": 3,
-    "linux": 5,
-}
+    # Consulting
+    "cloud consultant",
+    "aws consultant",
+]
 
 
 # ============================================================
-# HARD BLOCKED TITLE KEYWORDS
+# BLOCKED TITLE KEYWORDS
 # ============================================================
-
-# Agar title mein ye hain -> direct reject
+#
+# These roles should NOT come to Telegram.
+#
 
 BLOCKED_TITLE_KEYWORDS = [
 
-    # DevOps
+    # --------------------------------------------------------
+    # DEVOPS
+    # --------------------------------------------------------
+
     "devops",
     "dev sec ops",
     "devsecops",
 
-    # Other clouds
+    # --------------------------------------------------------
+    # OTHER CLOUDS
+    # --------------------------------------------------------
+
     "azure engineer",
     "azure cloud engineer",
+    "azure infrastructure engineer",
+    "azure platform engineer",
     "microsoft azure",
+
     "gcp engineer",
+    "gcp cloud engineer",
+    "gcp infrastructure engineer",
+    "gcp platform engineer",
     "google cloud engineer",
 
-    # Developers
-    "software developer",
+    # --------------------------------------------------------
+    # SOFTWARE DEVELOPMENT
+    # --------------------------------------------------------
+
     "software engineer",
+    "software developer",
     "software development engineer",
+    "software development",
+
     "java developer",
+    "java engineer",
+
     "python developer",
+    "python engineer",
+
     "backend developer",
+    "backend engineer",
+
     "frontend developer",
+    "frontend engineer",
+
     "full stack developer",
     "fullstack developer",
-    "react developer",
-    "android developer",
-    "ios developer",
+    "full stack engineer",
+    "fullstack engineer",
 
-    # Data
+    "react developer",
+    "react engineer",
+
+    "angular developer",
+    "angular engineer",
+
+    "android developer",
+    "android engineer",
+
+    "ios developer",
+    "ios engineer",
+
+    # --------------------------------------------------------
+    # DATA / AI
+    # --------------------------------------------------------
+
     "data engineer",
     "data scientist",
+    "data analyst",
+
     "machine learning engineer",
+    "machine learning",
+
     "ml engineer",
     "ai engineer",
 
-    # QA
+    # --------------------------------------------------------
+    # QA / TESTING
+    # --------------------------------------------------------
+
     "qa engineer",
+    "qa automation engineer",
     "test engineer",
     "testing engineer",
+    "software test engineer",
     "automation tester",
 
-    # Security
+    # --------------------------------------------------------
+    # NETWORK
+    # --------------------------------------------------------
+
+    "network engineer",
+    "network administrator",
+    "network architect",
+
+    # --------------------------------------------------------
+    # SECURITY
+    # --------------------------------------------------------
+
     "cybersecurity",
     "cyber security",
     "security engineer",
+    "information security engineer",
 
-    # Networking
-    "network engineer",
-    "network administrator",
+    # --------------------------------------------------------
+    # SALESFORCE
+    # --------------------------------------------------------
 
-    # Salesforce
     "salesforce",
 
+    # --------------------------------------------------------
     # SAP
+    # --------------------------------------------------------
+
     "sap consultant",
     "sap engineer",
-]
+    "sap developer",
 
+    # --------------------------------------------------------
+    # GENERIC SUPPORT
+    # --------------------------------------------------------
 
-# ============================================================
-# SOFT NEGATIVE WORDS
-# ============================================================
-
-# Description mein hone se direct reject nahi hoga.
-# Sirf score reduce hoga.
-
-SOFT_NEGATIVE = [
-    "jenkins",
-    "kubernetes",
-    "helm",
-    "argocd",
-    "ansible",
-    "gitlab ci",
-    "azure",
-    "gcp",
+    "desktop support",
+    "help desk",
+    "service desk",
+    "technical support representative",
 ]
 
 
@@ -253,11 +253,16 @@ HEADERS = {
         "Safari/537.36"
     ),
 
-    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Language": (
+        "en-US,en;q=0.9"
+    ),
 
     "Accept": (
-        "text/html,application/xhtml+xml,"
-        "application/xml;q=0.9,image/avif,image/webp,"
+        "text/html,"
+        "application/xhtml+xml,"
+        "application/xml;q=0.9,"
+        "image/avif,"
+        "image/webp,"
         "*/*;q=0.8"
     ),
 }
@@ -288,10 +293,9 @@ def contains(text, keyword):
     text = normalize(text)
     keyword = normalize(keyword)
 
-    if not text:
+    if not text or not keyword:
         return False
 
-    # Multi-word phrase
     if " " in keyword:
         return keyword in text
 
@@ -315,353 +319,58 @@ def escape_html(text):
 
 
 # ============================================================
-# TITLE BLOCK CHECK
+# JOB FILTER
 # ============================================================
 
-def blocked_title(title):
-
-    t = normalize(title)
-
-    for keyword in BLOCKED_TITLE_KEYWORDS:
-
-        if contains(t, keyword):
-
-            return True, keyword
-
-    return False, None
-
-
-# ============================================================
-# TITLE SCORE
-# ============================================================
-
-def get_title_score(title):
-
-    t = normalize(title)
-
-    score = 0
-    matches = []
-
-    for keyword, points in TITLE_SCORES.items():
-
-        if contains(t, keyword):
-
-            score += points
-            matches.append(keyword)
-
-    return score, matches
-
-
-# ============================================================
-# DESCRIPTION / SKILL SCORE
-# ============================================================
-
-def get_skill_score(description):
-
-    d = normalize(description)
-
-    score = 0
-    matches = []
-
-    for skill, points in SKILLS.items():
-
-        if contains(d, skill):
-
-            score += points
-            matches.append(skill)
-
-    return score, matches
-
-
-# ============================================================
-# EXPERIENCE CHECK
-# ============================================================
-
-def get_experience(description):
-
-    d = normalize(description)
-
-    # 3-5 years
-    match = re.search(
-        r"(\d+)\s*(?:-|to)\s*(\d+)\s*(?:years?|yrs?)",
-        d
-    )
-
-    if match:
-
-        return int(match.group(1)), int(match.group(2))
-
-    # 5+ years
-    match = re.search(
-        r"(\d+)\s*\+\s*(?:years?|yrs?)",
-        d
-    )
-
-    if match:
-
-        return int(match.group(1)), None
-
-    # 5 years of experience
-    match = re.search(
-        r"(\d+)\s*(?:years?|yrs?)\s*(?:of)?\s*experience",
-        d
-    )
-
-    if match:
-
-        years = int(match.group(1))
-
-        return years, years
-
-    return None, None
-
-
-def experience_ok(description):
-
-    low, high = get_experience(description)
-
-    # Agar experience detect nahi hua,
-    # job ko reject mat karo.
-    if low is None:
-        return True
-
-    # Example 0-2 years
-    if high is not None and high < MIN_YEARS:
-
-        return False
-
-    # Example 1+ years
-    if high is None and low < MIN_YEARS:
-
-        return False
-
-    return True
-
-
-# ============================================================
-# JOB EVALUATION
-# ============================================================
-
-def evaluate_job(title, description):
+def is_relevant(title, description):
 
     title = normalize(title)
     description = normalize(description)
 
     # --------------------------------------------------------
-    # 1. HARD TITLE BLOCK
+    # 1. HARD BLOCK
     # --------------------------------------------------------
 
-    is_blocked, reason = blocked_title(title)
+    for keyword in BLOCKED_TITLE_KEYWORDS:
 
-    if is_blocked:
+        if contains(title, keyword):
 
-        return {
-            "relevant": False,
-            "score": 0,
-            "skills": [],
-            "reason": f"Blocked title: {reason}",
-        }
+            return False, (
+                f"Blocked title: {keyword}"
+            )
 
 
     # --------------------------------------------------------
-    # 2. TITLE MUST BE CLOUD/INFRASTRUCTURE RELATED
+    # 2. TARGET ROLE
     # --------------------------------------------------------
 
-    title_score, title_matches = get_title_score(title)
+    for keyword in ALLOWED_TITLE_KEYWORDS:
 
-    if title_score == 0:
+        if contains(title, keyword):
 
-        return {
-            "relevant": False,
-            "score": 0,
-            "skills": [],
-            "reason": "Title not relevant",
-        }
+            return True, "Eligible"
 
 
     # --------------------------------------------------------
-    # 3. EXPERIENCE
+    # 3. NOT TARGET
     # --------------------------------------------------------
 
-    if not experience_ok(description):
-
-        return {
-            "relevant": False,
-            "score": 0,
-            "skills": [],
-            "reason": "Too junior",
-        }
+    return False, "Title not relevant"
 
 
-    # --------------------------------------------------------
-    # 4. SKILL SCORE
-    # --------------------------------------------------------
+# ============================================================
+# BUILD LINKEDIN SEARCH URL
+# ============================================================
 
-    skill_score, skill_matches = get_skill_score(
-        description
+def build_search_url(search_term):
+
+    encoded_term = quote(
+        search_term
     )
-
-
-    # --------------------------------------------------------
-    # 5. AWS CHECK
-    #
-    # IMPORTANT:
-    # AWS title mein mandatory nahi hai.
-    # Description mein AWS hona enough hai.
-    # --------------------------------------------------------
-
-    has_aws = (
-        contains(title, "aws")
-        or contains(description, "aws")
-        or contains(description, "amazon web services")
-    )
-
-
-    if not has_aws:
-
-        return {
-            "relevant": False,
-            "score": 0,
-            "skills": skill_matches,
-            "reason": "No AWS signal",
-        }
-
-
-    # --------------------------------------------------------
-    # 6. AWS BONUS
-    # --------------------------------------------------------
-
-    score = title_score + skill_score
-
-    if has_aws:
-
-        score += 10
-
-
-    # --------------------------------------------------------
-    # 7. CLOUD INFRASTRUCTURE BONUS
-    # --------------------------------------------------------
-
-    if contains(description, "cloud infrastructure"):
-
-        score += 8
-
-
-    if contains(description, "infrastructure as code"):
-
-        score += 8
-
-
-    if contains(description, "terraform"):
-
-        score += 8
-
-
-    # --------------------------------------------------------
-    # 8. DEVOPS PENALTY
-    #
-    # DevOps title already rejected.
-    # But if description contains DevOps, reduce score heavily.
-    # --------------------------------------------------------
-
-    if contains(description, "devops"):
-
-        score -= 25
-
-
-    # --------------------------------------------------------
-    # 9. SOFT NEGATIVE
-    # --------------------------------------------------------
-
-    negative_count = 0
-
-    for word in SOFT_NEGATIVE:
-
-        if contains(description, word):
-
-            negative_count += 1
-
-
-    score -= negative_count * 2
-
-
-    # --------------------------------------------------------
-    # 10. SCORE LIMIT
-    # --------------------------------------------------------
-
-    score = max(
-        0,
-        min(score, 100)
-    )
-
-
-    # --------------------------------------------------------
-    # 11. FINAL DECISION
-    # --------------------------------------------------------
-
-    if score < MIN_SCORE:
-
-        return {
-            "relevant": False,
-            "score": score,
-            "skills": skill_matches,
-            "reason": "Score too low",
-        }
-
-
-    return {
-        "relevant": True,
-        "score": score,
-        "skills": skill_matches,
-        "reason": "Good match",
-    }
-
-
-# ============================================================
-# TELEGRAM
-# ============================================================
-
-def send_telegram(message):
-
-    try:
-
-        response = requests.post(
-
-            f"https://api.telegram.org/"
-            f"bot{BOT_TOKEN}/sendMessage",
-
-            data={
-                "chat_id": CHAT_ID,
-                "text": message,
-                "parse_mode": "HTML",
-                "disable_web_page_preview": False,
-            },
-
-            timeout=15,
-        )
-
-        response.raise_for_status()
-
-        return True
-
-    except Exception as e:
-
-        print(
-            f"Telegram error: {e}"
-        )
-
-        return False
-
-
-# ============================================================
-# BUILD LINKEDIN URL
-# ============================================================
-
-def build_url(search_term):
 
     return (
         "https://www.linkedin.com/jobs/search/"
-        f"?keywords={quote(search_term)}"
+        f"?keywords={encoded_term}"
         "&location=India"
         f"&f_TPR={TIME_FILTER}"
         "&sortBy=DD"
@@ -669,22 +378,38 @@ def build_url(search_term):
 
 
 # ============================================================
-# FETCH WITH RETRY
+# FETCH LINKEDIN JOBS
 # ============================================================
 
-def fetch_search(search_term):
+def fetch_jobs(search_term):
 
-    url = build_url(search_term)
+    url = build_search_url(
+        search_term
+    )
 
     print()
-    print(
-        f"Searching: {search_term}"
+    print("=" * 60)
+    print(f"Searching: {search_term}")
+
+    # --------------------------------------------------------
+    # Delay to reduce 429
+    # --------------------------------------------------------
+
+    delay = random.uniform(
+        5,
+        9
     )
 
-    # Small random delay
-    time.sleep(
-        random.uniform(3, 6)
+    print(
+        f"Waiting {delay:.1f}s..."
     )
+
+    time.sleep(delay)
+
+
+    # --------------------------------------------------------
+    # Retry
+    # --------------------------------------------------------
 
     for attempt in range(3):
 
@@ -693,8 +418,9 @@ def fetch_search(search_term):
             response = requests.get(
                 url,
                 headers=HEADERS,
-                timeout=20,
+                timeout=20
             )
+
 
             # ------------------------------------------------
             # Rate limit
@@ -702,22 +428,32 @@ def fetch_search(search_term):
 
             if response.status_code == 429:
 
-                wait = 15 * (attempt + 1)
-
-                print(
-                    f"429 rate limit. "
-                    f"Waiting {wait}s..."
+                wait_time = (
+                    30 * (attempt + 1)
                 )
 
-                time.sleep(wait)
+                print(
+                    "⚠️ LinkedIn rate limited "
+                    "(429)"
+                )
+
+                print(
+                    f"Waiting {wait_time}s..."
+                )
+
+                time.sleep(
+                    wait_time
+                )
 
                 continue
 
 
             response.raise_for_status()
 
+
             print(
-                f"Status: {response.status_code}"
+                f"Status: "
+                f"{response.status_code}"
             )
 
             print(
@@ -725,30 +461,56 @@ def fetch_search(search_term):
                 f"{len(response.text)}"
             )
 
+
             soup = BeautifulSoup(
                 response.text,
                 "html.parser"
             )
+
 
             cards = soup.find_all(
                 "div",
                 class_="base-search-card"
             )
 
+
             print(
                 f"Found {len(cards)} cards"
             )
 
+
             return cards
 
 
-        except Exception as e:
+        except requests.RequestException as e:
 
             print(
                 f"Fetch failed: {e}"
             )
 
-            time.sleep(5)
+            if attempt < 2:
+
+                wait_time = (
+                    15 * (attempt + 1)
+                )
+
+                print(
+                    f"Retrying in "
+                    f"{wait_time}s..."
+                )
+
+                time.sleep(
+                    wait_time
+                )
+
+
+        except Exception as e:
+
+            print(
+                f"Unexpected error: {e}"
+            )
+
+            break
 
 
     return []
@@ -762,15 +524,15 @@ def extract_job(card):
 
     try:
 
-        title_element = card.find("h3")
+        # ----------------------------------------------------
+        # Title
+        # ----------------------------------------------------
 
-        company_element = card.find("h4")
-
-        link_element = card.find("a")
-
+        title_element = card.find(
+            "h3"
+        )
 
         if not title_element:
-
             return None
 
 
@@ -780,21 +542,35 @@ def extract_job(card):
         )
 
 
-        company = (
+        # ----------------------------------------------------
+        # Company
+        # ----------------------------------------------------
 
-            company_element.get_text(
+        company_element = card.find(
+            "h4"
+        )
+
+        if company_element:
+
+            company = company_element.get_text(
                 " ",
                 strip=True
             )
 
-            if company_element
+        else:
 
-            else "Unknown"
+            company = "Unknown"
+
+
+        # ----------------------------------------------------
+        # Link
+        # ----------------------------------------------------
+
+        link_element = card.find(
+            "a"
         )
 
-
         if not link_element:
-
             return None
 
 
@@ -802,30 +578,30 @@ def extract_job(card):
             "href"
         )
 
-
         if not link:
-
             return None
 
 
+        # Remove query parameters
         link = link.split("?")[0]
 
 
         # ----------------------------------------------------
-        # Search card snippet
+        # Description snippet
         # ----------------------------------------------------
 
-        snippet_element = card.find(
+        description_element = card.find(
             "p",
             class_="base-search-card__snippet"
         )
 
+        if description_element:
 
-        if snippet_element:
-
-            description = snippet_element.get_text(
-                " ",
-                strip=True
+            description = (
+                description_element.get_text(
+                    " ",
+                    strip=True
+                )
             )
 
         else:
@@ -842,12 +618,13 @@ def extract_job(card):
             class_="job-search-card__location"
         )
 
-
         if location_element:
 
-            location = location_element.get_text(
-                " ",
-                strip=True
+            location = (
+                location_element.get_text(
+                    " ",
+                    strip=True
+                )
             )
 
         else:
@@ -858,14 +635,11 @@ def extract_job(card):
         return {
 
             "title": title,
-
             "company": company,
-
+            "link": link,
+            "description": description,
             "location": location,
 
-            "description": description,
-
-            "link": link,
         }
 
 
@@ -879,80 +653,123 @@ def extract_job(card):
 
 
 # ============================================================
-# SCORE LABEL
+# TELEGRAM
 # ============================================================
 
-def score_label(score):
+def send_telegram(message):
 
-    if score >= 85:
+    url = (
+        f"https://api.telegram.org/"
+        f"bot{BOT_TOKEN}/sendMessage"
+    )
 
-        return "🔥 Excellent Match"
+    try:
 
-    elif score >= 70:
+        response = requests.post(
 
-        return "🟢 Strong Match"
+            url,
 
-    elif score >= 55:
+            data={
 
-        return "✅ Good Match"
+                "chat_id": CHAT_ID,
 
-    else:
+                "text": message,
 
-        return "🟡 Possible Match"
+                "parse_mode": "HTML",
+
+                "disable_web_page_preview": False,
+
+            },
+
+            timeout=15
+        )
+
+
+        response.raise_for_status()
+
+        return True
+
+
+    except Exception as e:
+
+        print(
+            f"❌ Telegram error: {e}"
+        )
+
+        return False
 
 
 # ============================================================
 # TELEGRAM MESSAGE
 # ============================================================
 
-def build_message(
-    job,
-    result
-):
+def build_message(job):
 
-    score = result["score"]
+    title = escape_html(
+        job["title"]
+    )
 
-    skills = result["skills"][:12]
+    company = escape_html(
+        job["company"]
+    )
 
-    if skills:
-
-        skills_text = ", ".join(
-            skill.upper()
-            for skill in skills
-        )
-
-    else:
-
-        skills_text = "AWS / Cloud"
-
+    location = escape_html(
+        job["location"]
+    )
 
     return (
 
         "🚀 <b>AWS CLOUD JOB ALERT</b>\n\n"
 
-        f"💼 <b>"
-        f"{escape_html(job['title'])}"
-        f"</b>\n"
+        f"💼 <b>{title}</b>\n"
 
-        f"🏢 "
-        f"{escape_html(job['company'])}\n"
+        f"🏢 {company}\n"
 
-        f"📍 "
-        f"{escape_html(job['location'])}\n\n"
+        f"📍 {location}\n\n"
 
-        f"🎯 <b>Match: "
-        f"{score}/100</b>\n"
+        "☁️ <b>Target:</b> "
+        "AWS / Cloud Infrastructure\n\n"
 
-        f"{score_label(score)}\n\n"
+        f"🔗 <a href='{job['link']}'>"
+        "Apply Now"
+        "</a>"
 
-        f"🛠 <b>Matched Skills</b>\n"
-        f"{escape_html(skills_text)}\n\n"
-
-        f"🔗 "
-        f"<a href='{job['link']}'>"
-        f"Apply Now"
-        f"</a>"
     )
+
+
+# ============================================================
+# TELEGRAM TEST
+# ============================================================
+
+def telegram_test():
+
+    print()
+    print(
+        "Testing Telegram..."
+    )
+
+    message = (
+
+        "✅ <b>AWS Job Alert Bot</b>\n\n"
+
+        "Telegram connection is working."
+
+    )
+
+    if send_telegram(message):
+
+        print(
+            "✅ Telegram: OK"
+        )
+
+        return True
+
+
+    print(
+        "❌ Telegram: FAILED"
+    )
+
+    return False
 
 
 # ============================================================
@@ -961,6 +778,7 @@ def build_message(
 
 def main():
 
+    print()
     print("=" * 60)
 
     print(
@@ -968,11 +786,20 @@ def main():
     )
 
     print(
-        "Target: AWS Cloud Infrastructure / Cloud Operations"
+        "Target: AWS Cloud / Infrastructure / "
+        "Cloud Operations / Platform / SRE"
     )
 
     print(
         "DevOps: BLOCKED"
+    )
+
+    print(
+        "Scoring: DISABLED"
+    )
+
+    print(
+        f"Searches: {len(SEARCH_TERMS)}"
     )
 
     print(
@@ -982,35 +809,22 @@ def main():
     print("=" * 60)
 
 
-    # --------------------------------------------------------
-    # Telegram test
-    # --------------------------------------------------------
+    # ========================================================
+    # TELEGRAM TEST
+    # ========================================================
 
-    print(
-        "\nTesting Telegram..."
-    )
-
-    if send_telegram(
-        "✅ <b>AWS Job Alert Bot</b>\n"
-        "Telegram connection is working."
-    ):
+    if not telegram_test():
 
         print(
-            "Telegram: OK"
-        )
-
-    else:
-
-        print(
-            "Telegram: FAILED"
+            "Stopping: Telegram unavailable."
         )
 
         return
 
 
-    # --------------------------------------------------------
-    # Track duplicates
-    # --------------------------------------------------------
+    # ========================================================
+    # DUPLICATE TRACKING
+    # ========================================================
 
     seen_links = set()
 
@@ -1019,60 +833,60 @@ def main():
     rejected = 0
 
 
-    # --------------------------------------------------------
-    # Search
-    # --------------------------------------------------------
+    # ========================================================
+    # SEARCH ALL TERMS
+    # ========================================================
 
     for search_term in SEARCH_TERMS:
 
-        cards = fetch_search(
+        cards = fetch_jobs(
             search_term
         )
 
 
         for card in cards:
 
-            job = extract_job(card)
+            job = extract_job(
+                card
+            )
 
 
             if not job:
-
                 continue
 
 
+            # ------------------------------------------------
+            # Duplicate job
+            # ------------------------------------------------
+
             link = job["link"]
-
-
-            # ------------------------------------------------
-            # Duplicate
-            # ------------------------------------------------
 
             if link in seen_links:
 
                 continue
 
-
             seen_links.add(link)
 
 
             # ------------------------------------------------
-            # Evaluate
+            # Filter
             # ------------------------------------------------
 
-            result = evaluate_job(
+            relevant, reason = is_relevant(
 
                 job["title"],
 
                 job["description"]
+
             )
 
 
-            if not result["relevant"]:
+            if not relevant:
 
                 print(
                     f"  ❌ SKIP: "
                     f"{job['title']} "
-                    f"| {result['reason']}"
+                    f"| {reason}"
                 )
 
                 rejected += 1
@@ -1081,12 +895,11 @@ def main():
 
 
             # ------------------------------------------------
-            # Send
+            # SEND
             # ------------------------------------------------
 
             message = build_message(
-                job,
-                result
+                job
             )
 
 
@@ -1095,8 +908,7 @@ def main():
                 print(
                     f"  ✅ SENT: "
                     f"{job['title']} "
-                    f"| Score "
-                    f"{result['score']}/100"
+                    f"@ {job['company']}"
                 )
 
                 sent += 1
@@ -1109,16 +921,19 @@ def main():
                 )
 
 
-            # Small delay between Telegram messages
+            # Telegram delay
 
             time.sleep(
-                random.uniform(1, 2)
+                random.uniform(
+                    1,
+                    2
+                )
             )
 
 
-    # --------------------------------------------------------
-    # Summary
-    # --------------------------------------------------------
+    # ========================================================
+    # SUMMARY
+    # ========================================================
 
     print()
     print("=" * 60)
@@ -1131,6 +946,10 @@ def main():
 
     print("=" * 60)
 
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
 
 if __name__ == "__main__":
 
