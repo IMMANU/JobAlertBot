@@ -2,6 +2,7 @@ import os
 import re
 import time
 import random
+import json
 import requests
 
 from bs4 import BeautifulSoup
@@ -20,20 +21,13 @@ CHAT_ID = os.environ["CHAT_ID"]
 # r3600  = last 1 hour
 TIME_FILTER = "r86400"
 
+# Persistent duplicate tracking file
+SEEN_JOBS_FILE = "seen_jobs.json"
+
 
 # ============================================================
 # SEARCH TERMS
 # ============================================================
-#
-# Targeted searches for YOUR profile.
-#
-# No DevOps search.
-# No Kubernetes requirement.
-# No Terraform requirement.
-# No ECS requirement.
-#
-# These are simply discovery queries.
-#
 
 SEARCH_TERMS = [
     "AWS Cloud Engineer",
@@ -51,7 +45,6 @@ SEARCH_TERMS = [
     "AWS support engineer",
     "AWS systems engineer",
     "cloud systems engineer",
-    
     "Cloud Platform Engineer",
     "Infrastructure Engineer",
     "SRE AWS",
@@ -81,6 +74,7 @@ ALLOWED_TITLE_KEYWORDS = [
     "cloud operation engineer",
     "cloud operations",
     "cloud operations specialist",
+    "cloud operation specialist",
 
     # Platform
     "cloud platform engineer",
@@ -116,9 +110,6 @@ ALLOWED_TITLE_KEYWORDS = [
 # ============================================================
 # BLOCKED TITLE KEYWORDS
 # ============================================================
-#
-# These roles should NOT come to Telegram.
-#
 
 BLOCKED_TITLE_KEYWORDS = [
 
@@ -139,12 +130,18 @@ BLOCKED_TITLE_KEYWORDS = [
     "azure infrastructure engineer",
     "azure platform engineer",
     "microsoft azure",
+    "azure",
 
     "gcp engineer",
     "gcp cloud engineer",
     "gcp infrastructure engineer",
     "gcp platform engineer",
     "google cloud engineer",
+    "google cloud",
+
+    # VMware / private cloud
+    "vmware",
+    "private cloud",
 
     # --------------------------------------------------------
     # SOFTWARE DEVELOPMENT
@@ -184,6 +181,10 @@ BLOCKED_TITLE_KEYWORDS = [
     "ios developer",
     "ios engineer",
 
+    # SDE
+    "sde ",
+    "sde-",
+
     # --------------------------------------------------------
     # DATA / AI
     # --------------------------------------------------------
@@ -197,6 +198,9 @@ BLOCKED_TITLE_KEYWORDS = [
 
     "ml engineer",
     "ai engineer",
+    "ai/ml",
+
+    "analytics platform",
 
     # --------------------------------------------------------
     # QA / TESTING
@@ -331,6 +335,88 @@ def escape_html(text):
 
 
 # ============================================================
+# PERSISTENT DUPLICATE TRACKING
+# ============================================================
+
+def load_seen_jobs():
+
+    if not os.path.exists(SEEN_JOBS_FILE):
+
+        print(
+            "ℹ️ No seen_jobs.json found. "
+            "Starting fresh."
+        )
+
+        return set()
+
+    try:
+
+        with open(
+            SEEN_JOBS_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            data = json.load(file)
+
+        if not isinstance(data, list):
+
+            print(
+                "⚠️ Invalid seen_jobs.json. "
+                "Starting fresh."
+            )
+
+            return set()
+
+        seen_jobs = set(data)
+
+        print(
+            f"📦 Previously sent jobs: "
+            f"{len(seen_jobs)}"
+        )
+
+        return seen_jobs
+
+    except Exception as e:
+
+        print(
+            f"⚠️ Could not read "
+            f"{SEEN_JOBS_FILE}: {e}"
+        )
+
+        return set()
+
+
+def save_seen_jobs(seen_jobs):
+
+    try:
+
+        with open(
+            SEEN_JOBS_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
+
+            json.dump(
+                sorted(seen_jobs),
+                file,
+                indent=2,
+                ensure_ascii=False
+            )
+
+        return True
+
+    except Exception as e:
+
+        print(
+            f"❌ Could not save "
+            f"{SEEN_JOBS_FILE}: {e}"
+        )
+
+        return False
+
+
+# ============================================================
 # JOB FILTER
 # ============================================================
 
@@ -401,7 +487,9 @@ def fetch_jobs(search_term):
 
     print()
     print("=" * 60)
-    print(f"Searching: {search_term}")
+    print(
+        f"Searching: {search_term}"
+    )
 
     # --------------------------------------------------------
     # Delay to reduce 429
@@ -432,7 +520,6 @@ def fetch_jobs(search_term):
                 headers=HEADERS,
                 timeout=20
             )
-
 
             # ------------------------------------------------
             # Rate limit
@@ -818,6 +905,10 @@ def main():
         f"Time filter: {TIME_FILTER}"
     )
 
+    print(
+        f"Duplicate file: {SEEN_JOBS_FILE}"
+    )
+
     print("=" * 60)
 
 
@@ -835,14 +926,14 @@ def main():
 
 
     # ========================================================
-    # DUPLICATE TRACKING
+    # LOAD PERSISTENT DUPLICATES
     # ========================================================
 
-    seen_links = set()
+    seen_links = load_seen_jobs()
 
     sent = 0
-
     rejected = 0
+    duplicates = 0
 
 
     # ========================================================
@@ -868,16 +959,21 @@ def main():
 
 
             # ------------------------------------------------
-            # Duplicate job
+            # Persistent duplicate check
             # ------------------------------------------------
 
             link = job["link"]
 
             if link in seen_links:
 
-                continue
+                duplicates += 1
 
-            seen_links.add(link)
+                print(
+                    f"  🔁 DUPLICATE: "
+                    f"{job['title']}"
+                )
+
+                continue
 
 
             # ------------------------------------------------
@@ -907,7 +1003,7 @@ def main():
 
 
             # ------------------------------------------------
-            # SEND
+            # SEND TO TELEGRAM
             # ------------------------------------------------
 
             message = build_message(
@@ -925,6 +1021,20 @@ def main():
 
                 sent += 1
 
+
+                # --------------------------------------------
+                # IMPORTANT
+                #
+                # Save ONLY after Telegram succeeds.
+                # --------------------------------------------
+
+                seen_links.add(link)
+
+                save_seen_jobs(
+                    seen_links
+                )
+
+
             else:
 
                 print(
@@ -933,7 +1043,9 @@ def main():
                 )
 
 
+            # ------------------------------------------------
             # Telegram delay
+            # ------------------------------------------------
 
             time.sleep(
                 random.uniform(
@@ -941,6 +1053,15 @@ def main():
                     2
                 )
             )
+
+
+    # ========================================================
+    # FINAL SAVE
+    # ========================================================
+
+    save_seen_jobs(
+        seen_links
+    )
 
 
     # ========================================================
@@ -953,7 +1074,13 @@ def main():
     print(
         f"Done | "
         f"Sent: {sent} | "
-        f"Rejected: {rejected}"
+        f"Rejected: {rejected} | "
+        f"Duplicates: {duplicates}"
+    )
+
+    print(
+        f"Total saved jobs: "
+        f"{len(seen_links)}"
     )
 
     print("=" * 60)
