@@ -42,15 +42,27 @@ jobs:
 
 
       # =====================================================
-      # RUN BOT
+      # RUN LINKEDIN SCRAPER
       # =====================================================
 
-      - name: Run Bot
+      - name: Run LinkedIn Bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
           python main.py
+
+
+      # =====================================================
+      # RUN CAREER PAGE SCRAPER
+      # =====================================================
+
+      - name: Run Career Scraper
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          python career_scraper.py
 
 
       # =====================================================
